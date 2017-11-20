@@ -17,21 +17,31 @@ namespace FirefoxSessionManagerExport
         {
             if (args.Length != 1)
             {
+                Console.WriteLine("Please specify a Session Manager backup file as parameter.");
+                Console.WriteLine("An HTML file will be generated with all links.");
                 return;
             }
 
             var file = args[0];
+            if (!File.Exists(file))
+            {
+                Console.WriteLine("The specified parameter is not an existing file.");
+                return;
+            }
+
+            // strait forward: read the file, create HTML file with all available links
             var text = File.ReadAllText(file);
             var backup = JObject.Parse(text);
 
+            // extract tab groups
             var root = backup["windows"].First;
-
             var tabGroupsText = root["extData"]["tabview-group"].Value<string>();
             var tabGroupsData = JObject.Parse(tabGroupsText);
             var tabGroups = tabGroupsData.Children().ToDictionary(
                 x => x.First["id"].Value<string>(),
                 y => y.First["title"].Value<string>());
 
+            // extract tabs
             var tabsData = root["tabs"];
             var tabs = tabsData
                 .Select(t =>
@@ -55,11 +65,12 @@ namespace FirefoxSessionManagerExport
                     return new {GroupId = groupId, IsPinned = isPinned, Urls = urls.ToList()};
                 }).OrderBy(x => Convert.ToInt32(x.GroupId)).ToList();
 
+            // group tabs by tab groups
             var tabsByGroup = tabs.GroupBy(t => t.GroupId);
 
+            // create HTML file
             var htmlText = new StringBuilder();
             htmlText.Append("<html><body>");
-
             foreach (var tabGroup in tabsByGroup)
             {
                 htmlText.Append($"<h1>{tabGroups[tabGroup.Key]}</h1><ul>");
@@ -93,6 +104,7 @@ namespace FirefoxSessionManagerExport
             htmlText.Append("</body></html>");
 
             var outputFile = file + ".html";
+            Console.WriteLine($"writing link collection into {outputFile}");
             File.WriteAllText(outputFile, htmlText.ToString());
         }
     }
