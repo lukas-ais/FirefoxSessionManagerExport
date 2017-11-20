@@ -29,9 +29,10 @@ namespace FirefoxSessionManagerExport
                 return;
             }
 
-            // strait forward: read the file, create HTML file with all available links
+            // strait forward: read the file (skip non-JSON code), create HTML file with all available links
             var text = File.ReadAllText(file);
-            var backup = JObject.Parse(text);
+            var startPosition = text.IndexOf("{", StringComparison.Ordinal);
+            var backup = JObject.Parse(text.Substring(startPosition));
 
             // extract tab groups
             var root = backup["windows"].First;
